@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CWatcher.h"
 #include "System.h"
+#include "Logger.h"
 
 Watcher::Watcher(const std::wstring& filename) : _filename(filename)
 {
@@ -13,9 +14,47 @@ Watcher::Watcher(const std::wstring& filename) : _filename(filename)
 	Debug();
 }
 
+std::wstring EventInfo::What() const
+{
+	TCHAR str[1000];
+	try {
+		StringCchPrintf(str, sizeof(str), L"%02d:%02d:%02d.%03d  [%s] %s   %s",
+			time.wHour, time.wMinute, time.wSecond, time.wMilliseconds, 
+			desc.at(code).c_str(), info->Print().c_str(), info->GetIDs().c_str());
+	}
+	catch (std::out_of_range)
+	{
+		return L"Unknown event code";
+	}
+	return str;
+}
+
 Watcher::~Watcher()
 {
 	System::SetDebugPrivilegies(false);
+
+	Logger log(L"log.txt");
+	std::wstring delimiter(L"___________________________________________________\n");
+	log.Add(L"Process Launch Watcher 2.0\n");
+	log.Add(delimiter);
+	log.Add(L"[ E] Exception     / Сгенерировано исключение");
+	log.Add(L"[CT] CreateThread  / Создан новый поток");
+	log.Add(L"[CP] CreateProcess / Создан новый процесс");
+	log.Add(L"[ET] ExitThread    / Удален поток");
+	log.Add(L"[EP] ExitProcess   / Удален процесс");
+	log.Add(L"[LD] Load DLL      / Загружена библиотека");
+	log.Add(L"[UD] Unload DLL    / Выгружена библиотека");
+	log.Add(L"[DS] Debug String  / Получена отладочная информация");
+	log.Add(L"[ R] RIP Event\n");
+	log.Add(L"B: Base, A: Address, P: Process, T: Thread");
+	log.Add(delimiter);
+
+	for (auto ev : _events)
+	{
+		log.Add(ev->What());
+	}
+
+	log.Save();
 }
 
 void Watcher::Debug()
@@ -44,20 +83,19 @@ void Watcher::Debug()
 		switch (event.dwDebugEventCode)
 		{
 		case CREATE_PROCESS_DEBUG_EVENT:
-			ev.info = new ProcessInfo(event);
-			_processList.emplace(event.dwProcessId, dynamic_cast<ProcessInfo*>(ev.info));
+			ev.info = _processList[event.dwProcessId] = std::make_shared<ProcessInfo>(event);
 			hProcess = event.u.CreateProcessInfo.hProcess;
 			break;
 		case LOAD_DLL_DEBUG_EVENT:
-			ev.info = new LibraryInfo(event);
-			_memory.emplace((DWORD)event.u.LoadDll.lpBaseOfDll, dynamic_cast<LibraryInfo*>(ev.info));
+			ev.info = std::make_shared<LibraryInfo>(event);
+			_memory[(DWORD)event.u.LoadDll.lpBaseOfDll] = ev.info;
 			break;
 		case UNLOAD_DLL_DEBUG_EVENT:
 			ev.info = _memory[(DWORD)event.u.UnloadDll.lpBaseOfDll];
 			_memory.erase((DWORD)event.u.UnloadDll.lpBaseOfDll);
 			break;
 		case EXCEPTION_DEBUG_EVENT:
-			ev.info = new ExceptionInfo(event);
+			ev.info = std::make_shared<ExceptionInfo>(event);
 			break;
 		case EXIT_PROCESS_DEBUG_EVENT:
 			status = DBG_TERMINATE_PROCESS;
@@ -65,23 +103,23 @@ void Watcher::Debug()
 			ev.info = _processList[event.dwProcessId];
 			break;
 		case CREATE_THREAD_DEBUG_EVENT:
-			ev.info = new ThreadInfo(event);
-			_threadList.emplace(event.dwThreadId, dynamic_cast<ThreadInfo*>(ev.info));
+			ev.info = _threadList[event.dwThreadId] = std::make_shared<ThreadInfo>(event);
 			break;
 		case EXIT_THREAD_DEBUG_EVENT:
 			status = DBG_TERMINATE_THREAD;
 			_threadList[event.dwThreadId]->SetExitCode(event.u.ExitThread.dwExitCode);
+			ev.info = _threadList[event.dwThreadId];
 			break;
 		case OUTPUT_DEBUG_STRING_EVENT:
-			ev.info = new DebugStringInfo(event, hProcess);
+			ev.info = std::make_shared<DebugStringInfo>(event, hProcess);
 			break;
 		case RIP_EVENT:
-			ev.info = new RIPInfo(event);
+			ev.info = std::make_shared<RIPInfo>(event);
 			break;
 		default: break;
 		}
 
-		_events.push_back(ev);
+		_events.push_back(std::make_shared<EventInfo>(ev));
 		ContinueDebugEvent(event.dwProcessId, event.dwThreadId, status);
 	}
 }

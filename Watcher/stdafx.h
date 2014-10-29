@@ -23,3 +23,4 @@
 #include <vector>
 #include <map>
 #include <strsafe.h>
+#include <memory>
