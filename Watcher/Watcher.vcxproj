@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="CWatcher.h" />
     <ClInclude Include="DebugInfo.h" />
+    <ClInclude Include="FileInfo.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -174,6 +175,7 @@
   <ItemGroup>
     <ClCompile Include="CWatcher.cpp" />
     <ClCompile Include="DebugInfo.cpp" />
+    <ClCompile Include="FileInfo.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

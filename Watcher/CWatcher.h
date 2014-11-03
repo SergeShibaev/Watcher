@@ -31,12 +31,12 @@ class Watcher
 	std::wstring _filename;
 	std::vector<std::shared_ptr<EventInfo> > _events;
 	std::map<DWORD, std::shared_ptr<ProcessInfo> > _processList;
+	std::set<std::wstring> _libList;
 	std::map<DWORD, std::shared_ptr<ThreadInfo> > _threadList;
-	std::map<DWORD, std::shared_ptr<DebugInfo> > _memory;
+	std::map<LPVOID, std::shared_ptr<DebugInfo> > _memory;
 
 	void Debug();
 public:
 	Watcher(const std::wstring& filename);
 	~Watcher();
 };
-

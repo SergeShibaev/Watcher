@@ -1,15 +1,7 @@
 #include "stdafx.h"
 #include "System.h"
 #include <Psapi.h>
-
-System::System()
-{
-}
-
-
-System::~System()
-{
-}
+#include <VersionHelpers.h>
 
 void System::ErrorExit(const std::wstring& reason)
 {
@@ -115,4 +107,32 @@ bool System::GetFileName(HANDLE hFile, std::wstring& filename)
 	}
 
 	return bSuccess;
+}
+
+std::wstring System::GetOSName()
+{
+	std::wstring sysName = L"Microsoft Windows ";
+	if (IsWindows8Point1OrGreater())
+		return sysName + L"8.1";
+	if (IsWindows8OrGreater())
+		return sysName + L"8";
+	if (IsWindows7SP1OrGreater())
+		return sysName + L"7 SP1";
+	if (IsWindows7OrGreater())
+		return sysName + L"7";
+	if (IsWindowsVistaSP2OrGreater())
+		return sysName + L"Vista SP2";
+	if (IsWindowsVistaSP1OrGreater())
+		return sysName + L"Vista SP1";
+	if (IsWindowsVistaOrGreater())
+		return sysName + L"Vista";
+	if (IsWindowsXPSP3OrGreater())
+		return sysName + L"XP SP3";
+	if (IsWindowsXPSP2OrGreater())
+		return sysName + L"XP SP2";
+	if (IsWindowsXPSP1OrGreater())
+		return sysName + L"XP SP1";
+	if (IsWindowsXPOrGreater())
+		return sysName + L"XP";
+	return L"Unknown system";
 }

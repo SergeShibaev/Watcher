@@ -24,3 +24,4 @@
 #include <map>
 #include <strsafe.h>
 #include <memory>
+#include <set>

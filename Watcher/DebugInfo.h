@@ -5,6 +5,7 @@ class DebugInfo
 	DWORD _processId;
 	DWORD _threadId;
 public:
+	DebugInfo() {}
 	DebugInfo(DWORD p, DWORD t) 
 		: _processId(p), _threadId(t) {}
 	std::wstring GetIDs() const;
@@ -15,8 +16,8 @@ public:
 
 class ProcessInfo : public DebugInfo
 {
-	DWORD _imageBase;
-	DWORD _startAddress;
+	LPVOID _imageBase;
+	LPVOID _startAddress;
 	std::wstring _imageName;
 	WORD _unicode;
 	DWORD _exitCode;
@@ -25,21 +26,21 @@ public:
 	ProcessInfo(const DEBUG_EVENT& event);
 	void SetExitCode(DWORD code) { _exitCode = code; }
 	DWORD GetExitCode() const { return _exitCode; }
-
+	std::wstring GetName() const { return _imageName; }
 	std::wstring Print() const override;
 	std::wstring Explain() const override { return L""; }
 };
 
 class ThreadInfo : public DebugInfo
 {
-	DWORD _localBase;
-	DWORD _startAddress;
+	LPVOID _localBase;
+	LPVOID _startAddress;
 	DWORD _exitCode;
 public:
 	ThreadInfo(const DEBUG_EVENT& event)
 		: DebugInfo(event.dwProcessId, event.dwThreadId),
-		_localBase((DWORD)event.u.CreateThread.lpThreadLocalBase), 
-		_startAddress((DWORD)event.u.CreateThread.lpStartAddress),
+		_localBase(event.u.CreateThread.lpThreadLocalBase), 
+		_startAddress(event.u.CreateThread.lpStartAddress),
 		_exitCode(0) {}
 	void SetExitCode(DWORD code) { _exitCode = code; }
 	DWORD GetExitCode() const { return _exitCode; }
@@ -50,11 +51,14 @@ public:
 
 class LibraryInfo : public DebugInfo
 {
-	DWORD _baseAddr;
+	LPVOID _baseAddr;
 	std::wstring _imageName;
 	WORD _unicode;
 public:
+	LibraryInfo() {};
 	LibraryInfo(const DEBUG_EVENT& event);
+
+	std::wstring GetName() const { return _imageName; }
 
 	std::wstring Print() const override;
 	std::wstring Explain() const override { return L""; }
@@ -66,11 +70,11 @@ class ExceptionInfo : public DebugInfo
 	std::map<DWORD, LPCTSTR> _excInfo;
 public:
 	ExceptionInfo(const DEBUG_EVENT& event) 
-		: DebugInfo(event.dwProcessId, event.dwThreadId), _item(event.u.Exception) 
+		: DebugInfo(event.dwProcessId, event.dwThreadId), _item(event.u.Exception)
 	{
 		_excInfo[EXCEPTION_ACCESS_VIOLATION] = L"У процесса недостаточно прав для получения доступа к виртуальному адресу";
 		_excInfo[EXCEPTION_ARRAY_BOUNDS_EXCEEDED] = L"Попытка прочитать данные за пределами объявленного массива";
-		_excInfo[EXCEPTION_BREAKPOINT] = L"Установлена точка останова (breakpoint)";
+		_excInfo[EXCEPTION_BREAKPOINT] = L"Установлена точка останова";
 		_excInfo[EXCEPTION_DATATYPE_MISALIGNMENT] = L"DATATYPE_MISALIGNMENT";
 		_excInfo[EXCEPTION_FLT_DENORMAL_OPERAND] = L"FLT_DENORMAL_OPERAND";
 		_excInfo[EXCEPTION_FLT_DIVIDE_BY_ZERO] = L"Попытка деления на ноль";

@@ -1,12 +1,9 @@
 #pragma once
-class System
+namespace System
 {
-public:
-	System();
-	~System();
-
-	static void ErrorExit(const std::wstring& reason);
-	static bool SetDebugPrivilegies(BOOL enable);
-	static bool GetFileName(HANDLE hFile, std::wstring& filename);
+	void ErrorExit(const std::wstring& reason);
+	bool SetDebugPrivilegies(BOOL enable);
+	bool GetFileName(HANDLE hFile, std::wstring& filename);
+	std::wstring GetOSName();
 };
 

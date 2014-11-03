@@ -2,6 +2,7 @@
 #include "CWatcher.h"
 #include "System.h"
 #include "Logger.h"
+#include "FileInfo.h"
 
 Watcher::Watcher(const std::wstring& filename) : _filename(filename)
 {
@@ -37,6 +38,8 @@ Watcher::~Watcher()
 	std::wstring delimiter(L"___________________________________________________\n");
 	log.Add(L"Process Launch Watcher 2.0\n");
 	log.Add(delimiter);
+	log.Add(System::GetOSName());
+	log.Add(delimiter);
 	log.Add(L"[ E] Exception     / Сгенерировано исключение");
 	log.Add(L"[CT] CreateThread  / Создан новый поток");
 	log.Add(L"[CP] CreateProcess / Создан новый процесс");
@@ -48,10 +51,25 @@ Watcher::~Watcher()
 	log.Add(L"[ R] RIP Event\n");
 	log.Add(L"B: Base, A: Address, P: Process, T: Thread");
 	log.Add(delimiter);
-
 	for (auto ev : _events)
 	{
 		log.Add(ev->What());
+	}
+
+	log.Add(L"\nПроцессы: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
+	log.Add(delimiter);
+	for (auto p : _processList)
+	{
+		FileInfo fi(p.second->GetName());
+		log.Add(fi.Serialize(" - ", FALSE));
+	}
+	
+	log.Add(L"\nБиблиотеки: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
+	log.Add(delimiter);
+	for (auto lib : _libList)
+	{
+		FileInfo fi(lib);
+		log.Add(fi.Serialize(" - ", FALSE));
 	}
 
 	log.Save();
@@ -88,11 +106,12 @@ void Watcher::Debug()
 			break;
 		case LOAD_DLL_DEBUG_EVENT:
 			ev.info = std::make_shared<LibraryInfo>(event);
-			_memory[(DWORD)event.u.LoadDll.lpBaseOfDll] = ev.info;
+			_libList.emplace(std::dynamic_pointer_cast<LibraryInfo>(ev.info).get()->GetName());
+			_memory[event.u.LoadDll.lpBaseOfDll] = ev.info;
 			break;
 		case UNLOAD_DLL_DEBUG_EVENT:
-			ev.info = _memory[(DWORD)event.u.UnloadDll.lpBaseOfDll];
-			_memory.erase((DWORD)event.u.UnloadDll.lpBaseOfDll);
+			ev.info = _memory[event.u.UnloadDll.lpBaseOfDll];
+			_memory.erase(event.u.UnloadDll.lpBaseOfDll);
 			break;
 		case EXCEPTION_DEBUG_EVENT:
 			ev.info = std::make_shared<ExceptionInfo>(event);
