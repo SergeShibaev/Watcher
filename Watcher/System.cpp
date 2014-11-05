@@ -109,30 +109,93 @@ bool System::GetFileName(HANDLE hFile, std::wstring& filename)
 	return bSuccess;
 }
 
-std::wstring System::GetOSName()
+void System::SysInfo::ReadOSName()
 {
-	std::wstring sysName = L"Microsoft Windows ";
+	_OSName = L"Microsoft Windows ";
 	if (IsWindows8Point1OrGreater())
-		return sysName + L"8.1";
-	if (IsWindows8OrGreater())
-		return sysName + L"8";
-	if (IsWindows7SP1OrGreater())
-		return sysName + L"7 SP1";
-	if (IsWindows7OrGreater())
-		return sysName + L"7";
-	if (IsWindowsVistaSP2OrGreater())
-		return sysName + L"Vista SP2";
-	if (IsWindowsVistaSP1OrGreater())
-		return sysName + L"Vista SP1";
-	if (IsWindowsVistaOrGreater())
-		return sysName + L"Vista";
-	if (IsWindowsXPSP3OrGreater())
-		return sysName + L"XP SP3";
-	if (IsWindowsXPSP2OrGreater())
-		return sysName + L"XP SP2";
-	if (IsWindowsXPSP1OrGreater())
-		return sysName + L"XP SP1";
-	if (IsWindowsXPOrGreater())
-		return sysName + L"XP";
-	return L"Unknown system";
+		_OSName += L"8.1";
+	else if (IsWindows8OrGreater())
+		_OSName += L"8";
+	else if (IsWindows7SP1OrGreater())
+		_OSName += L"7 SP1";
+	else if (IsWindows7OrGreater())
+		_OSName += L"7";
+	else if (IsWindowsVistaSP2OrGreater())
+		_OSName += L"Vista SP2";
+	else if (IsWindowsVistaSP1OrGreater())
+		_OSName += L"Vista SP1";
+	else if (IsWindowsVistaOrGreater())
+		_OSName += L"Vista";
+	else if (IsWindowsXPSP3OrGreater())
+		_OSName += L"XP SP3";
+	else if (IsWindowsXPSP2OrGreater())
+		_OSName += L"XP SP2";
+	else if (IsWindowsXPSP1OrGreater())
+		_OSName += L"XP SP1";
+	else if (IsWindowsXPOrGreater())
+		_OSName += L"XP";
+	else _OSName = L"Unknown system";
+}
+
+void System::SysInfo::ReadProductName()
+{
+	_OSProductName = Registry::GetValue(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"ProductName");
+}
+
+void System::SysInfo::ReadOSBuildLab()
+{
+	_OSBuildLab = Registry::GetValue(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"BuildLabEx");
+}
+
+void System::SysInfo::ReadOSVersion()
+{
+	_OSVersion = Registry::GetValue(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"CurrentVersion") + L"." +
+		   Registry::GetValue(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"CurrentBuild");
+}
+
+void System::SysInfo::ReadAppInitDLLs()
+{
+	_AppInitDlls = Registry::GetValue(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows", L"AppInit_DLLs");
+}
+
+void System::SysInfo::ReadProcessorID()
+{
+	_processorID = Registry::GetValue(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment", 
+		L"PROCESSOR_IDENTIFIER");
+}
+
+BOOL ReplaceSubString(std::wstring& source, const std::wstring& fromStr, const std::wstring& toStr)
+{
+	size_t pos = source.find(fromStr);
+	if (pos != std::wstring::npos)
+	{
+		source.replace(pos, fromStr.length(), toStr);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+void System::SysInfo::ReadKnownDLLs()
+{
+	TCHAR keyName[] = L"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\KnownDLLs";
+	_KnownDlls = Registry::GetValues(HKEY_LOCAL_MACHINE, keyName);
+
+	TCHAR envVar[MAX_PATH] = { 0 };
+	if (!FAILED(GetEnvironmentVariable(L"SystemRoot", envVar, MAX_PATH)))
+	{
+		ReplaceSubString(_KnownDlls[L"DllDirectory"], L"%SystemRoot%", envVar);
+		ReplaceSubString(_KnownDlls[L"DllDirectory32"], L"%SystemRoot%", envVar);
+	}
+		
+	/*for (auto item : values)
+	{
+		if (item.first == L"DllDirectory" || item.first == L"DllDirectory32")
+			continue;
+
+		WIN32_FIND_DATA fd;
+		std::wstring fileName = dir + L"\\" + item.second;
+		if (FindFirstFile(fileName.c_str(), &fd) != INVALID_HANDLE_VALUE)
+			dlls.push_back(fileName);
+	}*/
 }

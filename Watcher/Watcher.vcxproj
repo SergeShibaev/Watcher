@@ -166,6 +166,7 @@
     <ClInclude Include="DebugInfo.h" />
     <ClInclude Include="FileInfo.h" />
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="Registry.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="System.h" />
@@ -177,6 +178,7 @@
     <ClCompile Include="DebugInfo.cpp" />
     <ClCompile Include="FileInfo.cpp" />
     <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

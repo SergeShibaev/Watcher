@@ -25,3 +25,4 @@
 #include <strsafe.h>
 #include <memory>
 #include <set>
+#include "Registry.h"

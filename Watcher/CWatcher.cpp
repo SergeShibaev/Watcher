@@ -34,11 +34,36 @@ Watcher::~Watcher()
 {
 	System::SetDebugPrivilegies(false);
 
+	System::SysInfo sysInfo;
 	Logger log(L"log.txt");
-	std::wstring delimiter(L"___________________________________________________\n");
-	log.Add(L"Process Launch Watcher 2.0\n");
+	const std::wstring delimiter(80, '-');
+	log.Add(L"Process Launch Watcher 2.0  by Serge Shibaev  (http://sergeshibaev.ru)");
 	log.Add(delimiter);
-	log.Add(System::GetOSName());
+	log.Add(L"Processor: " + sysInfo.GetProcessorID() + L"\n");
+	log.Add(L"OS: " + sysInfo.GetOSName() + L" (" + sysInfo.GetOSVersion() + L")");
+	log.Add(L"Product: " + sysInfo.GetProductName());
+	log.Add(L"BuildLab: " + sysInfo.GetOSBuildLab() + L"\n");
+	log.Add(L"AppInit_DLLs: " + sysInfo.GetAppInitDLLs());
+	log.Add(L"\nKnown DLLs");
+	log.Add(std::wstring(10, '-'));
+	auto dlls = sysInfo.GetKnownDLLs();
+	log.Add(L"DllDirectory: " + dlls[L"DllDirectory"]);
+	log.Add(L"DllDirectory32: " + dlls[L"DllDirectory32"] + L"\n");
+	
+	for (auto lib : dlls)
+	{
+		if (lib.first == L"DllDirectory" || lib.first == L"DllDirectory32")
+			continue;
+
+		WIN32_FIND_DATA fd;
+		std::wstring fileName = dlls[L"DllDirectory"] + L"\\" + lib.second;
+		if (FindFirstFile(fileName.c_str(), &fd) == INVALID_HANDLE_VALUE)
+			log.Add(fileName + L" - файл не найден");
+		else
+			log.Add(fileName);
+		_libList.insert(fileName);
+	}
+	
 	log.Add(delimiter);
 	log.Add(L"[ E] Exception     / Сгенерировано исключение");
 	log.Add(L"[CT] CreateThread  / Создан новый поток");
@@ -50,7 +75,7 @@ Watcher::~Watcher()
 	log.Add(L"[DS] Debug String  / Получена отладочная информация");
 	log.Add(L"[ R] RIP Event\n");
 	log.Add(L"B: Base, A: Address, P: Process, T: Thread");
-	log.Add(delimiter);
+	log.Add(std::wstring(50, '-'));
 	for (auto ev : _events)
 	{
 		log.Add(ev->What());
@@ -106,7 +131,7 @@ void Watcher::Debug()
 			break;
 		case LOAD_DLL_DEBUG_EVENT:
 			ev.info = std::make_shared<LibraryInfo>(event);
-			_libList.emplace(std::dynamic_pointer_cast<LibraryInfo>(ev.info).get()->GetName());
+			_libList.insert(std::dynamic_pointer_cast<LibraryInfo>(ev.info).get()->GetName());
 			_memory[event.u.LoadDll.lpBaseOfDll] = ev.info;
 			break;
 		case UNLOAD_DLL_DEBUG_EVENT:
