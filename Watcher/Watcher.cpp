@@ -45,6 +45,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WATCHER));
 
 	Watcher watcher(L"C:\\Windows\\write.exe");
+	watcher.Save(L"log.txt");
 
 	// Цикл основного сообщения:
 	while (GetMessage(&msg, NULL, 0, 0))

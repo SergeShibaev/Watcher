@@ -30,12 +30,10 @@ std::wstring EventInfo::What() const
 	return str;
 }
 
-Watcher::~Watcher()
+void Watcher::Save(const std::wstring& fileName)
 {
-	System::SetDebugPrivilegies(false);
-
 	System::SysInfo sysInfo;
-	Logger log(L"log.txt");
+	Logger log(fileName);
 	const std::wstring delimiter(80, '-');
 	log.Add(L"Process Launch Watcher 2.0  by Serge Shibaev  (http://sergeshibaev.ru)");
 	log.Add(delimiter);
@@ -49,7 +47,7 @@ Watcher::~Watcher()
 	auto dlls = sysInfo.GetKnownDLLs();
 	log.Add(L"DllDirectory: " + dlls[L"DllDirectory"]);
 	log.Add(L"DllDirectory32: " + dlls[L"DllDirectory32"] + L"\n");
-	
+
 	for (auto lib : dlls)
 	{
 		if (lib.first == L"DllDirectory" || lib.first == L"DllDirectory32")
@@ -63,15 +61,15 @@ Watcher::~Watcher()
 			log.Add(fileName);
 		_libList.insert(fileName);
 	}
-	
+
 	log.Add(delimiter);
 	log.Add(L"[ E] Exception     / Сгенерировано исключение");
-	log.Add(L"[CT] CreateThread  / Создан новый поток");
-	log.Add(L"[CP] CreateProcess / Создан новый процесс");
-	log.Add(L"[ET] ExitThread    / Удален поток");
-	log.Add(L"[EP] ExitProcess   / Удален процесс");
-	log.Add(L"[LD] Load DLL      / Загружена библиотека");
-	log.Add(L"[UD] Unload DLL    / Выгружена библиотека");
+	log.Add(L"[ T] CreateThread  / Создан новый поток");
+	log.Add(L"[ P] CreateProcess / Создан новый процесс");
+	log.Add(L"[-T] ExitThread    / Удален поток");
+	log.Add(L"[-P] ExitProcess   / Удален процесс");
+	log.Add(L"[ L] Load DLL      / Загружена библиотека");
+	log.Add(L"[-L] Unload DLL    / Выгружена библиотека");
 	log.Add(L"[DS] Debug String  / Получена отладочная информация");
 	log.Add(L"[ R] RIP Event\n");
 	log.Add(L"B: Base, A: Address, P: Process, T: Thread");
@@ -88,7 +86,7 @@ Watcher::~Watcher()
 		FileInfo fi(p.second->GetName());
 		log.Add(fi.Serialize(" - ", FALSE));
 	}
-	
+
 	log.Add(L"\nБиблиотеки: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
 	log.Add(delimiter);
 	for (auto lib : _libList)
@@ -98,6 +96,11 @@ Watcher::~Watcher()
 	}
 
 	log.Save();
+}
+
+Watcher::~Watcher()
+{
+	System::SetDebugPrivilegies(false);
 }
 
 void Watcher::Debug()

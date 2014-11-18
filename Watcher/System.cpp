@@ -187,15 +187,4 @@ void System::SysInfo::ReadKnownDLLs()
 		ReplaceSubString(_KnownDlls[L"DllDirectory"], L"%SystemRoot%", envVar);
 		ReplaceSubString(_KnownDlls[L"DllDirectory32"], L"%SystemRoot%", envVar);
 	}
-		
-	/*for (auto item : values)
-	{
-		if (item.first == L"DllDirectory" || item.first == L"DllDirectory32")
-			continue;
-
-		WIN32_FIND_DATA fd;
-		std::wstring fileName = dir + L"\\" + item.second;
-		if (FindFirstFile(fileName.c_str(), &fd) != INVALID_HANDLE_VALUE)
-			dlls.push_back(fileName);
-	}*/
 }

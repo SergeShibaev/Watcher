@@ -13,12 +13,12 @@ public:
 	{
 		GetLocalTime(&time);
 		desc[EXCEPTION_DEBUG_EVENT] = L" E";
-		desc[CREATE_THREAD_DEBUG_EVENT] = L"CT";
-		desc[CREATE_PROCESS_DEBUG_EVENT] = L"CP";
-		desc[EXIT_THREAD_DEBUG_EVENT] = L"ET";
-		desc[EXIT_PROCESS_DEBUG_EVENT] = L"EP";
-		desc[LOAD_DLL_DEBUG_EVENT] = L"LD";
-		desc[UNLOAD_DLL_DEBUG_EVENT] = L"UD";
+		desc[CREATE_THREAD_DEBUG_EVENT] = L" T";
+		desc[CREATE_PROCESS_DEBUG_EVENT] = L" P";
+		desc[EXIT_THREAD_DEBUG_EVENT] = L"-T";
+		desc[EXIT_PROCESS_DEBUG_EVENT] = L"-P";
+		desc[LOAD_DLL_DEBUG_EVENT] = L" L";
+		desc[UNLOAD_DLL_DEBUG_EVENT] = L"-L";
 		desc[OUTPUT_DEBUG_STRING_EVENT] = L"DS";
 		desc[RIP_EVENT] = L" R";
 	}
@@ -38,5 +38,6 @@ class Watcher
 	void Debug();
 public:
 	Watcher(const std::wstring& filename);
+	void Save(const std::wstring& fileName);
 	~Watcher();
 };
