@@ -165,18 +165,21 @@
     <ClInclude Include="CWatcher.h" />
     <ClInclude Include="DebugInfo.h" />
     <ClInclude Include="FileInfo.h" />
+    <ClInclude Include="HttpSender.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Registry.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TaskManager.h" />
     <ClInclude Include="Watcher.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CWatcher.cpp" />
     <ClCompile Include="DebugInfo.cpp" />
     <ClCompile Include="FileInfo.cpp" />
+    <ClCompile Include="HttpSender.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -186,6 +189,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="System.cpp" />
+    <ClCompile Include="TaskManager.cpp" />
     <ClCompile Include="Watcher.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -4,7 +4,8 @@
 #include "stdafx.h"
 #include "Watcher.h"
 #include "CWatcher.h"
-
+#include "TaskManager.h"
+#include "HttpSender.h"
 
 #define MAX_LOADSTRING 100
 
@@ -45,7 +46,17 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WATCHER));
 
 	Watcher watcher(L"C:\\Windows\\write.exe");
+	//ShellExecute(NULL, L"open", L"http://sergeshibaev.ru", NULL, NULL, SW_NORMAL);
+
+	TaskManager tm;
+	tm.GetActiveProcesses();
+
+	HttpSender sender(L"sergeshibaev.ru");
+	sender.SendRequest(L"watcher/watcher.php", "OS=6.2.9200&test=string+string");
+
 	watcher.Save(L"log.txt");
+
+	
 
 	// Цикл основного сообщения:
 	while (GetMessage(&msg, NULL, 0, 0))

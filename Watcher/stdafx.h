@@ -25,4 +25,7 @@
 #include <strsafe.h>
 #include <memory>
 #include <set>
+#include "System.h"
 #include "Registry.h"
+#include <shellapi.h>
+#include <algorithm>
