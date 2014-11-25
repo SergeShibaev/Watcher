@@ -19,6 +19,7 @@
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
+#include <CommCtrl.h>
 #include <string>
 #include <vector>
 #include <map>

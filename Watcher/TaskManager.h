@@ -3,9 +3,12 @@
 
 class TaskManager
 {
+	typedef std::vector<PROCESSENTRY32> ProcessList;
+	typedef std::vector<MODULEENTRY32> ModuleList;
+
 	HANDLE _snapshot;
-	std::vector<PROCESSENTRY32> _processes;
-	std::map<DWORD, std::vector<MODULEENTRY32> > _modules;
+	ProcessList _processes;
+	std::map<DWORD, ModuleList > _modules;
 
 	void CreateSnapshot(DWORD flags, DWORD pId);
 	BOOL ProcessFirst(LPPROCESSENTRY32 pe) const;
@@ -17,5 +20,7 @@ public:
 	~TaskManager();
 
 	void GetActiveProcesses();
+	ProcessList GetProcesses() const { return _processes; }
+	static BOOL GetProcessCmdLine(DWORD pId, LPTSTR imagePath, LPTSTR cmdLine, DWORD bufsize);
 };
 

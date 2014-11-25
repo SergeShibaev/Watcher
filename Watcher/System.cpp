@@ -3,29 +3,36 @@
 #include <Psapi.h>
 #include <VersionHelpers.h>
 
-void System::ErrorExit(const std::wstring& reason)
+std::wstring System::GetLastErrorMessage(DWORD errCode)
 {
-	LPVOID lpMsgBuf;
-	std::wstring message;
-	DWORD dw = GetLastError();
+	LPVOID msg;
 
 	FormatMessage(
 		FORMAT_MESSAGE_ALLOCATE_BUFFER |
 		FORMAT_MESSAGE_FROM_SYSTEM |
 		FORMAT_MESSAGE_IGNORE_INSERTS,
 		NULL,
-		dw,
+		errCode,
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf,
+		(LPTSTR)&msg,
 		0, NULL);
 
-	message.resize(lstrlen((LPCTSTR)lpMsgBuf) + reason.size() + 40);
-	StringCchPrintf(&message[0], message.size(), L"%s.\nÎרטבךא 0x%X: %s", reason.c_str(), dw, lpMsgBuf);
+	std::wstring error((LPTSTR)msg);
+	LocalFree(msg);
+
+	return error;
+}
+
+void System::ErrorExit(const std::wstring& reason)
+{
+	DWORD errCode = GetLastError();
+	std::wstring error = GetLastErrorMessage(errCode);
+	std::wstring message;
+	message.resize(error.size() + reason.size() + 40);
+	StringCchPrintf(&message[0], message.size(), L"%s.\nÎרטבךא 0x%X: %s", reason.c_str(), errCode, error);
 	MessageBox(NULL, message.c_str(), L"Îרטבךא", MB_ICONERROR);
-
-	LocalFree(lpMsgBuf);
-
-	ExitProcess(dw);
+	
+	ExitProcess(errCode);
 }
 
 bool System::SetDebugPrivilegies(BOOL enable)

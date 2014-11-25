@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "TaskManager.h"
+#include <winternl.h>
 
 TaskManager::TaskManager(DWORD flags, DWORD pId)
 	: _snapshot(INVALID_HANDLE_VALUE)
@@ -54,7 +55,7 @@ void TaskManager::GetActiveProcesses()
 		MODULEENTRY32 me;
 		me.dwSize = sizeof(MODULEENTRY32);
 
-		std::vector<MODULEENTRY32> mods;
+		ModuleList mods;
 		BOOL modFound = mod.ModuleFirst(&me);
 		while (modFound) 
 		{
@@ -65,4 +66,61 @@ void TaskManager::GetActiveProcesses()
 
 		found = ProcessNext(&pe);
 	}
+}
+
+BOOL TaskManager::GetProcessCmdLine(DWORD pId, LPTSTR imagePath, LPTSTR cmdLine, DWORD bufsize)
+{
+	System::SetDebugPrivilegies(TRUE);
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, FALSE, pId);
+	if (!hProcess)
+	{
+		hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pId);
+		if (hProcess)
+		{
+			QueryFullProcessImageName(hProcess, 0, imagePath, &bufsize);
+			return TRUE;
+		}
+		//std::wstring error = System::GetLastErrorMessage(GetLastError());
+		//wcscpy_s(cmdLine, error.size() * sizeof(TCHAR), error.c_str());
+		return FALSE;
+	}
+
+	BOOL result = FALSE;
+	typedef NTSTATUS(NTAPI *pNtQueryInformationProcess)(
+		IN  HANDLE ProcessHandle,
+		IN  PROCESSINFOCLASS ProcessInformationClass,
+		OUT PVOID ProcessInformation,
+		IN  ULONG ProcessInformationLength,
+		OUT PULONG ReturnLength    OPTIONAL
+		);
+	pNtQueryInformationProcess NtQueryInformationProcess =
+		(pNtQueryInformationProcess)GetProcAddress(GetModuleHandle(L"ntdll.dll"), "NtQueryInformationProcess");
+	PROCESS_BASIC_INFORMATION pbi;
+	ZeroMemory(&pbi, sizeof(PROCESS_BASIC_INFORMATION));
+	if (!NtQueryInformationProcess(hProcess, PROCESSINFOCLASS::ProcessBasicInformation,
+		&pbi, sizeof(PROCESS_BASIC_INFORMATION), NULL))
+	{
+		PEB peb;
+		SIZE_T bytes;
+		ZeroMemory(&peb, sizeof(peb));
+		if (ReadProcessMemory(hProcess, pbi.PebBaseAddress, &peb, sizeof(PEB), &bytes))
+		{
+			RTL_USER_PROCESS_PARAMETERS ProcParams;
+			ZeroMemory(&ProcParams, sizeof(ProcParams));
+			if (ReadProcessMemory(hProcess, peb.ProcessParameters, &ProcParams, sizeof(ProcParams), &bytes))
+			{
+				if (bufsize >= ProcParams.CommandLine.Length &&
+					ReadProcessMemory(hProcess, ProcParams.CommandLine.Buffer, cmdLine, ProcParams.CommandLine.Length, &bytes))
+				{
+					ReadProcessMemory(hProcess, ProcParams.ImagePathName.Buffer, imagePath, ProcParams.ImagePathName.Length, &bytes);
+					result = TRUE;
+				}
+			}
+		}
+	}
+	CloseHandle(hProcess);
+	System::SetDebugPrivilegies(FALSE);
+
+	return result;
 }

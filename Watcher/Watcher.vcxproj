@@ -165,7 +165,9 @@
     <ClInclude Include="CWatcher.h" />
     <ClInclude Include="DebugInfo.h" />
     <ClInclude Include="FileInfo.h" />
+    <ClInclude Include="GUIControl.h" />
     <ClInclude Include="HttpSender.h" />
+    <ClInclude Include="InfoTable.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Registry.h" />
     <ClInclude Include="Resource.h" />
@@ -179,7 +181,9 @@
     <ClCompile Include="CWatcher.cpp" />
     <ClCompile Include="DebugInfo.cpp" />
     <ClCompile Include="FileInfo.cpp" />
+    <ClCompile Include="GUIControl.cpp" />
     <ClCompile Include="HttpSender.cpp" />
+    <ClCompile Include="InfoTable.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="stdafx.cpp">

@@ -41,6 +41,7 @@ namespace System {
 		std::wstring GetProcessorID() const { return _processorID; }
 	};
 
+	std::wstring GetLastErrorMessage(DWORD errCode);
 	void ErrorExit(const std::wstring& reason);
 	bool SetDebugPrivilegies(BOOL enable);
 	bool GetFileName(HANDLE hFile, std::wstring& filename);

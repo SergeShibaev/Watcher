@@ -6,6 +6,9 @@
 #include "CWatcher.h"
 #include "TaskManager.h"
 #include "HttpSender.h"
+#include "GUIControl.h"
+#include "InfoTable.h"
+#include "FileInfo.h"
 
 #define MAX_LOADSTRING 100
 
@@ -13,12 +16,17 @@
 HINSTANCE hInst;								// текущий экземпляр
 TCHAR szTitle[MAX_LOADSTRING];					// Текст строки заголовка
 TCHAR szWindowClass[MAX_LOADSTRING];			// имя класса главного окна
+HWND hDlg;										// главное окно диалога
+
+enum Tasks { TASK_WATCHER, TASK_TASKMAN };
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK	MainDlgProc(HWND, UINT, WPARAM, LPARAM);
+VOID ResizeControls(HWND hDlg);
+VOID RunTaskManager();
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -38,23 +46,20 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance);
 
 	// Выполнить инициализацию приложения:
-	if (!InitInstance (hInstance, nCmdShow))
+	if (!InitInstance (hInstance, SW_MAXIMIZE))
 	{
 		return FALSE;
 	}
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WATCHER));
 
-	Watcher watcher(L"C:\\Windows\\write.exe");
+	//Watcher watcher(L"C:\\Windows\\write.exe");
 	//ShellExecute(NULL, L"open", L"http://sergeshibaev.ru", NULL, NULL, SW_NORMAL);
 
-	TaskManager tm;
-	tm.GetActiveProcesses();
+	//HttpSender sender(L"sergeshibaev.ru");
+	//sender.SendRequest(L"watcher/watcher.php", "OS=6.2.9200&test=string+string");
 
-	HttpSender sender(L"sergeshibaev.ru");
-	sender.SendRequest(L"watcher/watcher.php", "OS=6.2.9200&test=string+string");
-
-	watcher.Save(L"log.txt");
+	//watcher.Save(L"log.txt");
 
 	
 
@@ -129,16 +134,30 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  НАЗНАЧЕНИЕ:  обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND	- обработка меню приложения
-//  WM_PAINT	-Закрасить главное окно
-//  WM_DESTROY	 - ввести сообщение о выходе и вернуться.
-//
-//
+VOID InitMainDialog(DWORD taskID)
+{
+	InfoTable table(GetDlgItem(hDlg, IDC_TABLE));
+
+	switch (taskID)
+	{
+	case TASK_WATCHER:
+		table.AddTextColumnL(L"Библиотека", 0, 250);
+		break;
+	case TASK_TASKMAN:
+		table.AddTextColumnL(L"Процесс", 0, 150);
+		table.AddTextColumnR(L"PID", 1, 50);
+		table.AddTextColumnL(L"Строка запуска", 2, 400);
+		table.AddTextColumnL(L"Описание", 3, 250);
+		table.AddTextColumnL(L"Копирайт", 4, 150);
+		table.AddTextColumnL(L"Версия", 5, 120);
+		break;
+	default:
+		table.DeleteAllItems();
+	}
+	
+	ShowWindow(hDlg, SW_MAXIMIZE);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
@@ -147,14 +166,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
+	case WM_CREATE:
+		hDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_MAINDIALOG), hWnd, MainDlgProc);
+		InitMainDialog(TASK_WATCHER);
+		break;
+	case WM_SIZE:
+		ResizeControls(hDlg);
+		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
 		// Разобрать выбор в меню:
 		switch (wmId)
 		{
-		case IDM_ABOUT:
-			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+		case IDM_OPEN:
+			InitMainDialog(TASK_WATCHER);
+			break;
+		case IDM_TASKMAN:
+			RunTaskManager();
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
@@ -177,22 +206,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-// Обработчик сообщений для окна "О программе".
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK MainDlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
 	case WM_INITDIALOG:
 		return (INT_PTR)TRUE;
-
+	case WM_SIZE:
+		ResizeControls(hWnd);
+		break;
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
 		break;
 	}
 	return (INT_PTR)FALSE;
+}
+
+VOID ResizeControls(HWND hDlg)
+{
+	GUIControl main(hDlg);
+	main.Maximize();
+
+	GUIControl table(GetDlgItem(hDlg, IDC_TABLE));
+	table.Maximize();
+}
+
+VOID RunTaskManager()
+{
+	TaskManager tm;
+	tm.GetActiveProcesses();
+
+	InfoTable table(GetDlgItem(hDlg, IDC_TABLE));
+	InitMainDialog(TASK_TASKMAN);
+
+	for (auto p : tm.GetProcesses())
+	{
+		TCHAR imageName[MAX_PATH] = { 0 };
+		TCHAR cmdLine[10000] = { 0 };
+
+		TaskManager::GetProcessCmdLine(p.th32ProcessID, imageName, cmdLine, sizeof(cmdLine)/sizeof(TCHAR));
+		std::wstring fileName = (imageName[0]) ? imageName : p.szExeFile;
+		if (!cmdLine[0])
+			wcscpy_s(cmdLine, fileName.size() * sizeof(TCHAR), fileName.c_str());
+		FileInfo fi(fileName);
+
+		DWORD line = table.GetItemCount();
+		table.AppendItem(p.szExeFile);
+		table.InsertSubitem(line, 1, ValueAsStr(p.th32ProcessID));
+		table.InsertSubitem(line, 2, cmdLine);
+		table.InsertSubitem(line, 3, fi.GetFileDescription());
+		table.InsertSubitem(line, 4, fi.GetCompanyName());
+		table.InsertSubitem(line, 5, fi.GetProductVersion());
+	}
 }
