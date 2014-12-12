@@ -7,21 +7,17 @@
 Watcher::Watcher(const std::wstring& filename) : _filename(filename)
 {
 	if (!System::SetDebugPrivilegies(true))
-	{
 		System::ErrorExit(L"Не удалось установить привилегии для отладки приложения. Дальнейшая работа невозможна");
-		return;
-	}
-
-	Debug();
 }
 
-std::wstring EventInfo::What() const
+std::wstring EventInfo::What(bool full) const
 {
 	TCHAR str[1000];
 	try {
-		StringCchPrintf(str, sizeof(str), L"%02d:%02d:%02d.%03d  [%s] %s   %s",
+		std::wstring desc = full ? _descFull.at(code) : _desc.at(code);
+		StringCchPrintf(str, sizeof(str), L"%02d:%02d:%02d.%03d  %s %s   %s",
 			time.wHour, time.wMinute, time.wSecond, time.wMilliseconds, 
-			desc.at(code).c_str(), info->Print().c_str(), info->GetIDs().c_str());
+			desc.c_str(), info->Print().c_str(), info->GetIDs().c_str());
 	}
 	catch (std::out_of_range)
 	{
@@ -42,26 +38,6 @@ void Watcher::Save(const std::wstring& fileName)
 	log.Add(L"Product: " + sysInfo.GetProductName());
 	log.Add(L"BuildLab: " + sysInfo.GetOSBuildLab() + L"\n");
 	log.Add(L"AppInit_DLLs: " + sysInfo.GetAppInitDLLs());
-	log.Add(L"\nKnown DLLs");
-	log.Add(std::wstring(10, '-'));
-	auto dlls = sysInfo.GetKnownDLLs();
-	log.Add(L"DllDirectory: " + dlls[L"DllDirectory"]);
-	log.Add(L"DllDirectory32: " + dlls[L"DllDirectory32"] + L"\n");
-
-	for (auto lib : dlls)
-	{
-		if (lib.first == L"DllDirectory" || lib.first == L"DllDirectory32")
-			continue;
-
-		WIN32_FIND_DATA fd;
-		std::wstring fileName = dlls[L"DllDirectory"] + L"\\" + lib.second;
-		if (FindFirstFile(fileName.c_str(), &fd) == INVALID_HANDLE_VALUE)
-			log.Add(fileName + L" - файл не найден");
-		else
-			log.Add(fileName);
-		_libList.insert(fileName);
-	}
-
 	log.Add(delimiter);
 	log.Add(L"[ E] Exception     / Сгенерировано исключение");
 	log.Add(L"[ T] CreateThread  / Создан новый поток");
@@ -76,15 +52,7 @@ void Watcher::Save(const std::wstring& fileName)
 	log.Add(std::wstring(50, '-'));
 	for (auto ev : _events)
 	{
-		log.Add(ev->What());
-	}
-
-	log.Add(L"\nПроцессы: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
-	log.Add(delimiter);
-	for (auto p : _processList)
-	{
-		FileInfo fi(p.second->GetName());
-		log.Add(fi.Serialize(" - ", FALSE));
+		log.Add(ev->What(FALSE));
 	}
 
 	log.Add(L"\nБиблиотеки: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
@@ -92,6 +60,37 @@ void Watcher::Save(const std::wstring& fileName)
 	for (auto lib : _libList)
 	{
 		FileInfo fi(lib);
+		log.Add(fi.Serialize(" - ", FALSE));
+	}
+
+	log.Add(L"\nKnown DLLs");
+	log.Add(std::wstring(10, '-'));
+	auto knownDlls = sysInfo.GetKnownDLLs();
+	log.Add(L"DllDirectory: " + knownDlls[L"DllDirectory"]);
+	log.Add(L"DllDirectory32: " + knownDlls[L"DllDirectory32"] + L"\n");
+
+	for (auto lib : knownDlls)
+	{
+		if (lib.first == L"DllDirectory" || lib.first == L"DllDirectory32")
+			continue;
+
+		WIN32_FIND_DATA fd;
+		std::wstring fileName = knownDlls[L"DllDirectory"] + L"\\" + lib.second;
+		if (FindFirstFile(fileName.c_str(), &fd) == INVALID_HANDLE_VALUE)
+			log.Add(fileName + L" - файл не найден");
+		else
+		{
+			FileInfo fi(fileName);
+			log.Add(fi.Serialize(" - ", FALSE));
+			_libList.insert(fileName);
+		}
+	}
+
+	log.Add(L"\nПроцессы: файл - путь - размер - версия - создан - модифицирован - описание - копирайт");
+	log.Add(delimiter);
+	for (auto p : _processList)
+	{
+		FileInfo fi(p.second->GetName());
 		log.Add(fi.Serialize(" - ", FALSE));
 	}
 
@@ -118,9 +117,9 @@ void Watcher::Debug()
 	HANDLE hProcess = pi.hProcess;
 	DWORD flags;
 	DEBUG_EVENT event;
-	ZeroMemory(&event, sizeof(DEBUG_EVENT));
 	while (GetHandleInformation(hProcess, &flags))
 	{
+		ZeroMemory(&event, sizeof(DEBUG_EVENT));
 		if (!WaitForDebugEvent(&event, INFINITE))
 			System::ErrorExit(L"Отладчик не смог обработать очередное событие");
 
@@ -142,6 +141,7 @@ void Watcher::Debug()
 			_memory.erase(event.u.UnloadDll.lpBaseOfDll);
 			break;
 		case EXCEPTION_DEBUG_EVENT:
+			status = DBG_EXCEPTION_NOT_HANDLED;
 			ev.info = std::make_shared<ExceptionInfo>(event);
 			break;
 		case EXIT_PROCESS_DEBUG_EVENT:
@@ -166,7 +166,9 @@ void Watcher::Debug()
 		default: break;
 		}
 
+		std::unique_lock<std::mutex> locker(M);
 		_events.push_back(std::make_shared<EventInfo>(ev));
+		Cond.notify_one();
 		ContinueDebugEvent(event.dwProcessId, event.dwThreadId, status);
 	}
 }

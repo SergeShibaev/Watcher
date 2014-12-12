@@ -20,6 +20,8 @@
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы
 #include <CommCtrl.h>
+#include <CommDlg.h>
+#include <windowsx.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -30,3 +32,7 @@
 #include "Registry.h"
 #include <shellapi.h>
 #include <algorithm>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <future>

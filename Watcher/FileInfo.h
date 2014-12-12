@@ -45,3 +45,5 @@ public:
 	std::wstring GetProductVersion() const { return _params.at(PRODUCT_VERSION).second; }
 	std::wstring Serialize(const std::string separator, const BOOL sysPath) const;	
 };
+
+void ExtractFileNameAndPath(const std::wstring& fullName, LPWSTR filePath, LPWSTR fileName);

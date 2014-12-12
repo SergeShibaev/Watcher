@@ -18,15 +18,17 @@ TCHAR szTitle[MAX_LOADSTRING];					// Текст строки заголовка
 TCHAR szWindowClass[MAX_LOADSTRING];			// имя класса главного окна
 HWND hDlg;										// главное окно диалога
 
-enum Tasks { TASK_WATCHER, TASK_TASKMAN };
+enum Tasks { TASK_WATCHER, TASK_TASKMAN, MAX_TASK };
 
 // Отправить объявления функций, включенных в этот модуль кода:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	MainDlgProc(HWND, UINT, WPARAM, LPARAM);
+
 VOID ResizeControls(HWND hDlg);
 VOID RunTaskManager();
+VOID RunWatcher();
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -137,11 +139,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 VOID InitMainDialog(DWORD taskID)
 {
 	InfoTable table(GetDlgItem(hDlg, IDC_TABLE));
+	GUIControl log(GetDlgItem(hDlg, IDC_LIST1));
+	log.Show();
 
 	switch (taskID)
 	{
 	case TASK_WATCHER:
-		table.AddTextColumnL(L"Библиотека", 0, 250);
+		table.AddTextColumnL(L"Библиотека", 0, 150);
+		table.AddTextColumnL(L"Путь", 1, 250);
+		table.AddTextColumnL(L"Описание", 2, 250);
+		table.AddTextColumnL(L"Копирайт", 3, 150);
+		table.AddTextColumnL(L"Версия", 4, 120);
+		table.AddTextColumnL(L"KnownDLLs", 5, 75);
 		break;
 	case TASK_TASKMAN:
 		table.AddTextColumnL(L"Процесс", 0, 150);
@@ -180,7 +189,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wmId)
 		{
 		case IDM_OPEN:
-			InitMainDialog(TASK_WATCHER);
+			RunWatcher();
 			break;
 		case IDM_TASKMAN:
 			RunTaskManager();
@@ -227,8 +236,11 @@ VOID ResizeControls(HWND hDlg)
 	GUIControl main(hDlg);
 	main.Maximize();
 
-	GUIControl table(GetDlgItem(hDlg, IDC_TABLE));
-	table.Maximize();
+	GUIControl log(GetDlgItem(hDlg, IDC_LIST1), main.width(), 200);
+	log.Move(0, main.height() - log.height());
+
+	GUIControl table(GetDlgItem(hDlg, IDC_TABLE), main.width(), main.height() - log.height());
+	table.Move(0, 0);
 }
 
 VOID RunTaskManager()
@@ -258,4 +270,74 @@ VOID RunTaskManager()
 		table.InsertSubitem(line, 4, fi.GetCompanyName());
 		table.InsertSubitem(line, 5, fi.GetProductVersion());
 	}
+}
+
+BOOL GetOpenFileName(LPTSTR fileName)
+{
+	TCHAR curDir[MAX_PATH] = L"";
+	GetCurrentDirectory(MAX_PATH, curDir);
+
+	OPENFILENAME ofn;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = L"Executable files (*.exe)\0*.exe\0";
+	ofn.nFilterIndex = 0;
+	ofn.lpstrFile = fileName;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.lpstrTitle = L"Выбор файла";
+	ofn.Flags = OFN_ENABLESIZING | OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_FORCESHOWHIDDEN;
+
+	GetOpenFileName(&ofn);
+
+	SetCurrentDirectory(curDir);
+
+	if (ofn.lpstrFile[0] != '\0')
+		return TRUE;
+	else
+		return FALSE;
+}
+
+VOID RunWatcher()
+{
+	TCHAR fileName[MAX_PATH] = { 0 };
+	if (!GetOpenFileName(fileName))
+		return;
+
+	InfoTable table(GetDlgItem(hDlg, IDC_TABLE));
+	InitMainDialog(TASK_WATCHER);
+	
+	HWND hList = GetDlgItem(hDlg, IDC_LIST1);
+	ListBox_ResetContent(hList);
+
+	Watcher watcher(fileName);
+	auto future = std::async(std::launch::async, [&] { watcher.Debug(); });
+
+	size_t cnt = 0;
+	while (future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+	{
+		std::unique_lock<std::mutex> lk(watcher.M);
+		watcher.Cond.wait(lk, [&] { return watcher.GetEvents().size() > cnt; });
+		while (cnt < watcher.GetEvents().size())
+			ListBox_AddString(hList, watcher.GetEvents()[cnt++]->What(true).c_str());
+		UpdateWindow(hList);
+	}
+
+	System::SysInfo si;
+	for (auto lib : watcher.GetLibraries())
+	{
+		TCHAR path[MAX_PATH], name[MAX_PATH];
+		ExtractFileNameAndPath(lib, path, name);
+		DWORD line = table.GetItemCount();
+
+		table.AppendItem(name);
+		table.InsertSubitem(line, 1, path);
+
+		FileInfo fi(lib);
+		table.InsertSubitem(line, 2, fi.GetFileDescription());
+		table.InsertSubitem(line, 3, fi.GetCompanyName());
+		table.InsertSubitem(line, 4, fi.GetProductVersion());
+	}
+	
+	watcher.Save(L"plw.log");
 }

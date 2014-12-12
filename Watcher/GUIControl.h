@@ -22,10 +22,7 @@ public:
 	DWORD GetBottom() const { return _r.bottom; }
 	DWORD GetRight() const { return _r.right; }
 
-	void Move() 
-	{ 
-		MoveWindow(_hWnd, _r.left, _r.top, this->width(), this->height(), TRUE); 
-	}
+	void Move() { MoveWindow(_hWnd, _r.left, _r.top, this->width(), this->height(), TRUE); }
 	void Move(const DWORD left, const DWORD top) 
 	{
 		_r.left = left; _r.top = top; 
@@ -37,5 +34,7 @@ public:
 		GetClientRect(GetParent(_hWnd), &_r);
 		Move();
 	}
+	void Hide() const { ShowWindow(_hWnd, SW_HIDE); }
+	void Show() const { ShowWindow(_hWnd, SW_NORMAL); }
 };
 
